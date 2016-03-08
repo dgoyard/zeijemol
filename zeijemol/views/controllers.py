@@ -35,7 +35,7 @@ class RateController(Controller):
 
         # Store my rate
         login = unicode(self._cw.session.login)
-        identifier = login + self._cw.form["filepath"]
+        identifier = login + self._cw.form["eid"]
         m = hashlib.md5()
         m.update(identifier)
         identifier = unicode(m.hexdigest())

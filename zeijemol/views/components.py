@@ -54,7 +54,7 @@ class CWWaveBox(component.CtxComponent):
                 wave_name = wave_srtruct["name"]
                 wave_description = wave_srtruct["description"]
                 wave_rset = self._cw.execute(
-                    "Any S Where W is Wave, W name '{0}', W snaps S".format(
+                    "Any S Where W is Wave, W name '{0}', W subject_measures S".format(
                         wave_name))
                 display_wave_button = False
                 for index_wave in range(wave_rset.rowcount):
