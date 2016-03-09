@@ -75,7 +75,6 @@ class Gallery(View):
         self.w(u"<div id='leftgrid'>")
         if len(fold_snaps_eids):
             self.w(u'<div id="fold-viewer" class="leftblock">')
-            self.w(u"<div id='loading-message' style='display:none' align='center'><img src='http://img.weather.weatherbug.com/images/common/loadData-lg.gif'/></div>")
             self.wview('slices-viewer', None, 'null',
                        snaps_eids=fold_snaps_eids)
             self.w(u'</div>')

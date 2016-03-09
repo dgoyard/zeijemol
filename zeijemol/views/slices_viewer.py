@@ -28,7 +28,7 @@ class SlicesViewer(View):
         self._cw.add_js("jquery-simple-slider/js/simple-slider.min.js")
         self._cw.add_css("jquery-simple-slider/css/simple-slider-volume.css")
         self._cw.add_css("jquery-simple-slider/css/simple-slider.css")
-        html = "<div id='loadingmessage' style='display:none' align='center'><img src='http://img.weather.weatherbug.com/images/common/loadData-lg.gif'/></div>"
+        html = "<div id='loading-message' style='display:none' align='center'><img src='{0}'/></div>".format(self._cw.data_url('images/loadData-lg.gif'))
         html += "<div id='slices-viewer-container' style='visibility: hidden;'>"
         html += "<div class='row' style='width: 100%;'>"
         for snap_eid in snaps_eids:
