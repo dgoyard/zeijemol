@@ -71,7 +71,7 @@ class Gallery(View):
 
         # Display the image to rate
 
-        fold_snaps_eids = [snap.eid for snap in subjectmeasure_entity.snaps if snap.dtype == "FOLD"] 
+        fold_snaps_eids = [snap.eid for snap in subjectmeasure_entity.snaps if snap.dtype == "FOLD"]
         self.w(u"<div id='leftgrid'>")
         if len(fold_snaps_eids):
             self.w(u'<div id="fold-viewer" class="leftblock">')
@@ -125,9 +125,9 @@ class Gallery(View):
                 'name="rate" value="Rate later"/>')
         # self.w(u'<input class="btn btn-warning" type="submit" '
                 # 'name="rate" value="Prescribe manual edits"/>')
-        
+
         if len(extra_answers) > 0:
-            self.w(u'<u>Optional observations:</u>')
+            self.w(u'<u>Reason of exclusion:</u>')
         for extra in extra_answers:
             self.w(u'<div class="checkbox">')
             self.w(u'<label>')
