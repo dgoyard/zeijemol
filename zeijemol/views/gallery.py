@@ -71,51 +71,47 @@ class Gallery(View):
 
         # Display the image to rate
 
-        fold_snaps = {snap.name: json.loads(snap.filepaths.getvalue())
-                      for snap in subjectmeasure_entity.snaps
-                      if snap.dtype == "FOLD"}
-
-        if len(fold_snaps):
-            self.w(u'<div id="fold-viewer"')
+        fold_snaps_eids = [snap.eid for snap in subjectmeasure_entity.snaps if snap.dtype == "FOLD"] 
+        self.w(u"<div id='leftgrid'>")
+        if len(fold_snaps_eids):
+            self.w(u'<div id="fold-viewer" class="leftblock">')
+            self.w(u"<div id='loading-message' style='display:none' align='center'><img src='http://img.weather.weatherbug.com/images/common/loadData-lg.gif'/></div>")
             self.wview('slices-viewer', None, 'null',
-                       volumes_slices=fold_snaps)
+                       snaps_eids=fold_snaps_eids)
             self.w(u'</div>')
 
-        for snap in [snap for snap in subjectmeasure_entity.snaps
-                     if snap.name not in fold_snaps]:
+        for snap in subjectmeasure_entity.snaps:
+            if snap.eid not in fold_snaps_eids:
 
-            snap_filepaths = json.loads(snap.filepaths.getvalue())
-            assert len(snap_filepaths) == 1
-            filepath = snap_filepaths[0]
-            self.w(u'<div id="gallery-img">')
+                snap_filepaths = json.loads(snap.filepaths.getvalue())
+                assert len(snap_filepaths) == 1
+                filepath = snap_filepaths[0]
+                self.w(u'<div id="gallery-img" class="leftblock">')
 
-            if snap.dtype == "CTM":
-                self.w(u'<div id="ctm-viewer">')
-                json_stats = self._cw.vreg.config["json_population_stats"]
-                if not os.path.isfile(json_stats):
-                    json_stats = os.path.join(self._cw.vreg.config.CUBES_DIR,
-                                              "zeijemol", "data", "qcsurf",
-                                              "population_mean_sd.json")
-                fsdir = os.path.join(os.path.dirname(filepath),
-                                     os.pardir)
-                self.wview("mesh-qcsurf", None, "null", fsdir=fsdir,
-                           header=[subjectmeasure_entity.name],
-                           populationpath=json_stats)
-                self.w(u'</div>')
-            else:
-                self.w(u'<div id="static-viewer">')
-                with open(filepath, "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read())
-                if snap.dtype.lower() == "pdf":
-                    self.w(u'<embed class="gallery-pdf" alt="Embedded PDF" '
-                           'src="data:application/pdf;base64, {0}" />'.format(
-                               encoded_string))
+                if snap.dtype == "CTM":
+                    json_stats = self._cw.vreg.config["json_population_stats"]
+                    if not os.path.isfile(json_stats):
+                        json_stats = os.path.join(self._cw.vreg.config.CUBES_DIR,
+                                                  "zeijemol", "data", "qcsurf",
+                                                  "population_mean_sd.json")
+                    fsdir = os.path.join(os.path.dirname(filepath),
+                                         os.pardir)
+                    self.wview("mesh-qcsurf", None, "null", fsdir=fsdir,
+                               header=[subjectmeasure_entity.name],
+                               populationpath=json_stats)
                 else:
-                    self.w(u'<img class="gallery-img" alt="Embedded Image" '
-                           'src="data:image/{0};base64, {1}" />'.format(
-                               snap.dtype.lower(), encoded_string))
+                    with open(filepath, "rb") as image_file:
+                        encoded_string = base64.b64encode(image_file.read())
+                    if snap.dtype.lower() == "pdf":
+                        self.w(u'<embed class="gallery-pdf" alt="Embedded PDF" '
+                               'src="data:application/pdf;base64, {0}" />'.format(
+                                   encoded_string))
+                    else:
+                        self.w(u'<img class="gallery-img" alt="Embedded Image" '
+                               'src="data:image/{0};base64, {1}" />'.format(
+                                   snap.dtype.lower(), encoded_string))
                 self.w(u'</div>')
-            self.w(u'</div>')
+        self.w(u'</div>')
 
         # Display/Send a form
         href = self._cw.build_url("rate-controller", eid=snap.eid)
