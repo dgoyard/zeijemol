@@ -31,7 +31,7 @@ class Status(View):
         """
         # Get all the rated snaps ordered by wave name and by raters
         rset = self._cw.execute(
-            "Any WN, SC, UN Where W is Wave, W name WN, W snaps S, "
+            "Any WN, SC, UN Where W is Wave, W name WN, W subject_measures S, "
             "S scores R, R score SC, R scored_by U, U login UN")
         snaps_struct = {}
         for wave_name, score, rater in rset:
@@ -40,20 +40,20 @@ class Status(View):
 
         # Construct all table rows
         labels = ["UID", "Wave name", "Number of rates",
-                  "Number of Good rates", "Number of Bad rates"]
+                  "Number of < Accept > rates", "Number of < Exclude > rates"]
         records = []
         for wave_name, wave_struct in snaps_struct.items():
 
             # Get the number of snaps associated to the current wave
             rset = self._cw.execute("Any COUNT(S) Where W is Wave, W name "
-                                    "'{0}', W snaps S".format(wave_name))
+                                    "'{0}', W subject_measures S".format(wave_name))
             nb_of_snaps = rset[0][0]
 
             # Fill the record
             for rater, scores in wave_struct.items():
                 nb_rates = len(scores)
-                nb_good = scores.count("Good")
-                nb_bad = scores.count("Bad")
+                nb_good = scores.count("Accept")
+                nb_bad = scores.count("Exclude")
                 records.append([
                     rater,
                     wave_name,

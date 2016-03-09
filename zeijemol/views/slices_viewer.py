@@ -46,8 +46,8 @@ class SlicesViewer(View):
                      "data-slider-step='1' data-slider-highlight='true' data-slider-theme='volume'>")
             html += "<h5 style='color: white;'>Browse volume</h5>"
             html += ("<input class= 'slice-bar' type='text' data-slider='true' "
-                     "data-slider-range='0,{0}' value='1' data-slider-step='1' "
-                     "data-slider-highlight='true' data-slider-theme='volume'>".format(slices_nb-1, volume_id))
+                     "data-slider-range='0,{0}' value='{1}' data-slider-step='1' "
+                     "data-slider-highlight='true' data-slider-theme='volume'>".format(slices_nb-1, round(slices_nb/2)))
             html += "<div class='ui-corner-all slider-content'>"
             html += "<div class='viewer ui-corner-all'>"
             html += "<div class='content-conveyor ui-helper-clearfix slices-container'>"
@@ -78,6 +78,7 @@ class SlicesViewer(View):
         html += "$(document).ready(function() {"
         post_data = {"snaps_eids": snaps_eids}
         html += """
+        $('.btn').each(function () {$(this).prop('disabled', true);}); 
 $('#loading-message').show();
 $.post("%s", %s)
   .done(function(data) {
@@ -100,9 +101,10 @@ $.post("%s", %s)
     init_slices_viewer();
     
     $('#slices-viewer-container').css('visibility', 'visible');
+    $('.btn').each(function () {$(this).prop('disabled', false);}); 
   })
   .fail(function() {
-    alert( "error" );
+    //alert( "error" );
   });
         """ % (self._cw.build_url("ajax", fname="get_b64_images"), json.dumps(post_data))
         html += "});"

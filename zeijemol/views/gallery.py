@@ -114,15 +114,19 @@ class Gallery(View):
         self.w(u'</div>')
 
         # Display/Send a form
-        href = self._cw.build_url("rate-controller", eid=snap.eid)
+        href = self._cw.build_url("rate-controller", eid=subjectmeasure_entity.eid)
         self.w(u'<div id="gallery-form">')
         self.w(u'<form action="{0}" method="post">'.format(href))
+        self.w(u'<input type="hidden" name="wave_name" value="{0}">'.format(wave_name))
         self.w(u'<input class="btn btn-success" type="submit" '
-               'name="rate" value="Good"/>')
+               'name="rate" value="Accept"/>')
         self.w(u'<input class="btn btn-danger" type="submit" '
-               'name="rate" value="Bad"/>')
+               'name="rate" value="Exclude"/>')
         self.w(u'<input class="btn btn-info" type="submit" '
-               'name="rate" value="Rate later"/>')
+                'name="rate" value="Rate later"/>')
+        # self.w(u'<input class="btn btn-warning" type="submit" '
+                # 'name="rate" value="Prescribe manual edits"/>')
+        
         if len(extra_answers) > 0:
             self.w(u'<u>Optional observations:</u>')
         for extra in extra_answers:
