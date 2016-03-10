@@ -41,7 +41,6 @@ class Gallery(View):
         extra_answers = json.loads(rset[0][0])
         rset = self._cw.execute("Any S Where W is Wave, W name '{0}', "
                                 "W subject_measures S".format(wave_name))
-        print rset
         rset_indices = []
         for index in range(rset.rowcount):
             subjectmeasure_entity = rset.get_entity(index, 0)
