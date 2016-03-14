@@ -76,13 +76,10 @@ class Snap(EntityType):
     dtype = String(
         required=True,
         indexed=True,
-        vocabulary=("CTM", "IM", "FOLD"),
-        description=u"the tools type: 'CTM', 'IM', 'FOLD'")
-    sha1hex = String(
-        maxsize=40,
-        description=u"the SHA1 sum of the file.")
-    subject_measure = SubjectRelation(
-        "SubjectMeasure",
+        vocabulary=("CTM", "IM", "triplanar"),
+        description=u"the tools type: 'CTM', 'IM', 'triplanar'")
+    snapset = SubjectRelation(
+        "SnapSet",
         cardinality="1*",
         inlined=False)
 
@@ -128,13 +125,13 @@ class Wave(EntityType):
         description=u"a long description of the wave.")
     extra_answers = String(
         description=u"a list of closed possible extra answers.")
-    subject_measures = SubjectRelation(
-        "SubjectMeasure",
+    snapsets = SubjectRelation(
+        "SnapSet",
         cardinality="*1",
         inlined=False)
 
 
-class SubjectMeasure(EntityType):
+class SnapSet(EntityType):
     """ An entity used to group within each wave, the snaps related to one
         subject.
 
@@ -148,7 +145,7 @@ class SubjectMeasure(EntityType):
     Relations
     ---------
     snaps: SubjectRelation
-        a snap is connected to one wave.
+        a SnapSet is connected to one wave.
     """
     identifier = String(
         required=True,
@@ -159,7 +156,7 @@ class SubjectMeasure(EntityType):
         required=True,
         fulltextindexed=True,
         maxsize=256,
-        description=u"Subject's measure name")
+        description=u"Snapset name")
     snaps = SubjectRelation(
         "Snap",
         cardinality="*1",
@@ -209,8 +206,8 @@ class Score(EntityType):
         description=u"the user score.")
     extra_scores = String(
         description=u"the extra user scores.")
-    subject_measure = SubjectRelation(
-        "SubjectMeasure",
+    snapset = SubjectRelation(
+        "SnapSet",
         cardinality="1*",
         inlined=False)
     scored_by = SubjectRelation(
