@@ -19,7 +19,7 @@ from cubicweb.view import View
 
 
 class Gallery(View):
-    """ Custom view to score subjectmeasure files.
+    """ Custom view to score snapSet files.
     """
     __regid__ = "gallery-view"
 
@@ -34,33 +34,33 @@ class Gallery(View):
         title = kwargs["title"][0]
         wave_name = kwargs["wave"][0]
 
-        # Get the subjectmeasure to rate
+        # Get the snapset to rate
         self.w(u'<h1>{0}</h1>'.format(title))
         rset = self._cw.execute("Any E Where W is Wave, W name '{0}', "
                                 "W extra_answers E".format(wave_name))
         extra_answers = json.loads(rset[0][0])
         rset = self._cw.execute("Any S Where W is Wave, W name '{0}', "
-                                "W subject_measures S".format(wave_name))
+                                "W snapsets S".format(wave_name))
         print rset
         rset_indices = []
         for index in range(rset.rowcount):
-            subjectmeasure_entity = rset.get_entity(index, 0)
+            snapset_entity = rset.get_entity(index, 0)
             scores = [
-                e for e in subjectmeasure_entity.scores
+                e for e in snapset_entity.scores
                 if e.scored_by[0].login == self._cw.session.login]
             if len(scores) == 0:
                 rset_indices.append(index)
         if len(rset_indices) == 0:
-            error = "No more subjectmeasure to rate, thanks."
+            error = "No more snapSet to rate, thanks."
             self.w(u"<p class='label label-danger'>{0}</p>".format(error))
             return
-        nb_of_subjectmeasures = rset.rowcount
-        nb_subjectmeasures_to_rate = len(rset_indices)
-        rand_index = random.randint(0, nb_subjectmeasures_to_rate - 1)
-        subjectmeasure_entity = rset.get_entity(rset_indices[rand_index], 0)
+        nb_of_snapsets = rset.rowcount
+        nb_snapsets_to_rate = len(rset_indices)
+        rand_index = random.randint(0, nb_snapsets_to_rate - 1)
+        snapset_entity = rset.get_entity(rset_indices[rand_index], 0)
 
         # Dispaly status
-        progress = int((1 - nb_subjectmeasures_to_rate / nb_of_subjectmeasures) * 100)
+        progress = int((1 - nb_snapsets_to_rate / nb_of_snapsets) * 100)
         self.w(u'<div class="progress">')
         self.w(u'<div class="progress-bar" role="progressbar" '
                'aria-valuenow="{0}" aria-valuemin="0" aria-valuemax='
@@ -70,9 +70,17 @@ class Gallery(View):
         self.w(u"</div>")
 
         # Display the image to rate
+
+        fold_snaps_eids = [snap.eid for snap in subjectmeasure_entity.snaps if snap.dtype == "FOLD"] 
         self.w(u"<div id='leftgrid'>")
-        for snap in subjectmeasure_entity.snaps:
-            if snap.dtype != "FOLD":
+        if len(fold_snaps_eids):
+            self.w(u'<div id="fold-viewer" class="leftblock">')
+            self.wview('slices-viewer', None, 'null',
+                       snaps_eids=fold_snaps_eids)
+            self.w(u'</div>')
+
+        for snap in snapset_entity.snaps:
+            if snap.eid not in fold_snaps_eids:
 
                 snap_filepaths = json.loads(snap.filepaths.getvalue())
                 assert len(snap_filepaths) == 1
@@ -88,7 +96,7 @@ class Gallery(View):
                     fsdir = os.path.join(os.path.dirname(filepath),
                                          os.pardir)
                     self.wview("mesh-qcsurf", None, "null", fsdir=fsdir,
-                               header=[subjectmeasure_entity.name],
+                               header=[snapset_entity.name],
                                populationpath=json_stats)
                 else:
                     with open(filepath, "rb") as image_file:
@@ -102,14 +110,6 @@ class Gallery(View):
                                'src="data:image/{0};base64, {1}" />'.format(
                                    snap.dtype.lower(), encoded_string))
                 self.w(u'</div>')
-
-        fold_snaps = {snap.name: snap.identifier for snap in
-                      subjectmeasure_entity.snaps if snap.dtype == "FOLD"}
-        if len(fold_snaps):
-            self.w(u'<div id="fold-viewer" class="leftblock">')
-            self.wview('triplanar-qc-view', None, 'null',
-                       snaps_identifiers=fold_snaps)
-            self.w(u'</div>')
         self.w(u'</div>')
 
         # Display/Send a form
@@ -125,9 +125,9 @@ class Gallery(View):
                 'name="rate" value="Rate later"/>')
         # self.w(u'<input class="btn btn-warning" type="submit" '
                 # 'name="rate" value="Prescribe manual edits"/>')
-
+        
         if len(extra_answers) > 0:
-            self.w(u'<u>Reason of exclusion:</u>')
+            self.w(u'<u>Optional observations:</u>')
         for extra in extra_answers:
             self.w(u'<div class="checkbox">')
             self.w(u'<label>')
