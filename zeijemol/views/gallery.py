@@ -40,12 +40,12 @@ class Gallery(View):
                                 "W extra_answers E".format(wave_name))
         extra_answers = json.loads(rset[0][0])
         rset = self._cw.execute("Any S Where W is Wave, W name '{0}', "
-                                "W snaps S".format(wave_name))
+                                "W snapsets S".format(wave_name))
         rset_indices = []
         for index in range(rset.rowcount):
-            snap_entity = rset.get_entity(index, 0)
+            snapset_entity = rset.get_entity(index, 0)
             scores = [
-                e for e in snap_entity.scores
+                e for e in snapset_entity.scores
                 if e.scored_by[0].login == self._cw.session.login]
             if len(scores) == 0:
                 rset_indices.append(index)
@@ -53,13 +53,13 @@ class Gallery(View):
             error = "No more snap to rate, thanks."
             self.w(u"<p class='label label-danger'>{0}</p>".format(error))
             return
-        nb_of_snaps = rset.rowcount
+        nb_of_snapsets = rset.rowcount
         nb_snaps_to_rate = len(rset_indices)
         rand_index = random.randint(0, nb_snaps_to_rate - 1)
-        snap_entity = rset.get_entity(rset_indices[rand_index], 0)
+        snapset_entity = rset.get_entity(rset_indices[rand_index], 0)
 
         # Dispaly status
-        progress = int((1 - nb_snaps_to_rate / nb_of_snaps) * 100)
+        progress = int((1 - nb_snaps_to_rate / nb_of_snapsets) * 100)
         self.w(u'<div class="progress">')
         self.w(u'<div class="progress-bar" role="progressbar" '
                'aria-valuenow="{0}" aria-valuemin="0" aria-valuemax='
@@ -69,31 +69,33 @@ class Gallery(View):
         self.w(u"</div>")
 
         # Display the image to rate
-        if snap_entity.dtype == "CTM":
-            self.w(u'<div id="gallery-img">')
-            json_stats = self._cw.vreg.config["json_population_stats"]
-            if not os.path.isfile(json_stats):
-                json_stats = os.path.join(self._cw.vreg.config.CUBES_DIR,
-                                          "zeijemol", "data", "qcsurf"
-                                          "population_mean_sd.json")
-            fsdir = os.path.join(os.path.dirname(snap_entity.filepath),
-                                 os.pardir)
-            self.wview("mesh-qcsurf", None, "null", fsdir=fsdir,
-                       header=[snap_entity.code], populationpath=json_stats)
-            self.w(u'</div>')
-        else:
-            with open(snap_entity.filepath, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read())
-            self.w(u'<div id="gallery-img">')
-            if snap_entity.dtype.lower() == "pdf":
-                self.w(u'<embed class="gallery-pdf" alt="Embedded PDF" '
-                       'src="data:application/pdf;base64, {0}" />'.format(
-                           encoded_string))
+        for snap_entity in snapset_entity.snaps:
+            if snap_entity.dtype == "CTM":
+                self.w(u'<div id="gallery-img">')
+                json_stats = self._cw.vreg.config["json_population_stats"]
+                if not os.path.isfile(json_stats):
+                    json_stats = os.path.join(self._cw.vreg.config.CUBES_DIR,
+                                              "zeijemol", "data", "qcsurf"
+                                              "population_mean_sd.json")
+                fsdir = os.path.join(os.path.dirname(snap_entity.filepath),
+                                     os.pardir)
+                self.wview("mesh-qcsurf", None, "null", fsdir=fsdir,
+                           header=[snap_entity.code],
+                           populationpath=json_stats)
+                self.w(u'</div>')
             else:
-                self.w(u'<img class="gallery-img" alt="Embedded Image" '
-                       'src="data:image/{0};base64, {1}" />'.format(
-                           snap_entity.dtype.lower(), encoded_string))
-            self.w(u'</div>')
+                with open(snap_entity.filepath, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read())
+                self.w(u'<div id="gallery-img">')
+                if snap_entity.dtype.lower() == "pdf":
+                    self.w(u'<embed class="gallery-pdf" alt="Embedded PDF" '
+                           'src="data:application/pdf;base64, {0}" />'.format(
+                               encoded_string))
+                else:
+                    self.w(u'<img class="gallery-img" alt="Embedded Image" '
+                           'src="data:image/{0};base64, {1}" />'.format(
+                               snap_entity.dtype.lower(), encoded_string))
+                self.w(u'</div>')
 
         # Display/Send a form
         href = self._cw.build_url("rate-controller", eid=snap_entity.eid,

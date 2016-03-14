@@ -36,7 +36,7 @@ class SnapIndexView(IndexView):
 
             # For each wave: get the number of scores associated to each snap
             rset = self._cw.execute(
-                "Any S, N Where S is Snap, S wave W, W name N")
+                "Any S, N Where S is SnapSet, S wave W, W name N")
             struct = {}
             for index, row in enumerate(rset):
                 wave_name = row[1]
@@ -83,7 +83,8 @@ class SnapIndexView(IndexView):
 
         # Build summary in memory ordered by category and wave name
         rset = self._cw.execute(
-            "Any S, W, N, C Where S is Snap, S wave W, W name N, W category C")
+            "Any S, W, N, C Where S is SnapSet, S wave W, W name N,"
+            " W category C")
         struct = {}
         for index, row in enumerate(rset):
             wave_name = row[2]
