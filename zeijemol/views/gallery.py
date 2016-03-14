@@ -14,7 +14,7 @@ import json
 import os
 
 # CW import
-from cgi import parse_qs
+from urlparse import parse_qs
 from cubicweb.view import View
 
 
@@ -71,16 +71,18 @@ class Gallery(View):
 
         # Display the image to rate
 
-        fold_snaps_eids = [snap.eid for snap in subjectmeasure_entity.snaps if snap.dtype == "FOLD"] 
+        triplanar_snaps_identifiers = {snap.name: snap.identifier
+                                       for snap in snapset_entity.snaps
+                                       if snap.dtype == "triplanar"}
         self.w(u"<div id='leftgrid'>")
-        if len(fold_snaps_eids):
+        if len(triplanar_snaps_identifiers):
             self.w(u'<div id="fold-viewer" class="leftblock">')
-            self.wview('slices-viewer', None, 'null',
-                       snaps_eids=fold_snaps_eids)
+            self.wview('triplanar-qc-view', None, 'null',
+                       snaps_identifiers=triplanar_snaps_identifiers)
             self.w(u'</div>')
 
         for snap in snapset_entity.snaps:
-            if snap.eid not in fold_snaps_eids:
+            if snap.dtype != "triplanar":
 
                 snap_filepaths = json.loads(snap.filepaths.getvalue())
                 assert len(snap_filepaths) == 1
@@ -113,7 +115,7 @@ class Gallery(View):
         self.w(u'</div>')
 
         # Display/Send a form
-        href = self._cw.build_url("rate-controller", eid=subjectmeasure_entity.eid)
+        href = self._cw.build_url("rate-controller", eid=snapset_entity.eid)
         self.w(u'<div id="gallery-form">')
         self.w(u'<form action="{0}" method="post">'.format(href))
         self.w(u'<input type="hidden" name="wave_name" value="{0}">'.format(wave_name))
@@ -122,10 +124,10 @@ class Gallery(View):
         self.w(u'<input class="btn btn-danger" type="submit" '
                'name="rate" value="Exclude"/>')
         self.w(u'<input class="btn btn-info" type="submit" '
-                'name="rate" value="Rate later"/>')
+               'name="rate" value="Rate later"/>')
         # self.w(u'<input class="btn btn-warning" type="submit" '
                 # 'name="rate" value="Prescribe manual edits"/>')
-        
+
         if len(extra_answers) > 0:
             self.w(u'<u>Optional observations:</u>')
         for extra in extra_answers:

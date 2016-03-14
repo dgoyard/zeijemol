@@ -1,0 +1,56 @@
+#leftgrid {
+    float: left;
+/*
+    width: 90%;
+*/
+}
+
+.leftblock {
+    background: rgba(0, 0, 0, 1);
+    border-radius: 8px;
+    margin: 0 0 15px 0;
+}
+
+[class^=slider] {
+    display: inline-block;
+    margin-bottom: 30px;
+}
+
+.output {
+    color: #888;
+    font-size: 14px;
+    padding-top: 1px;
+    margin-left: 5px;
+    vertical-align: top;
+}
+
+.slider-volume {
+    width: 100px;
+}
+
+.slider {
+    width: 100px;
+}
+
+.col-fixed, .row {
+  float: left;
+}
+
+.item {
+    display: none;
+    position: absolute;
+}
+
+.slice-img {
+    user-drag: none;
+    user-select: none;
+    border: 1px solid grey;
+    -moz-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.slice-img:hover {
+    cursor: crosshair;
+}
