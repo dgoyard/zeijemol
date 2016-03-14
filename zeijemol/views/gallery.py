@@ -14,7 +14,7 @@ import json
 import os
 
 # CW import
-from urlparse import parse_qs
+from cgi import parse_qs
 from cubicweb.view import View
 
 
@@ -41,7 +41,6 @@ class Gallery(View):
         extra_answers = json.loads(rset[0][0])
         rset = self._cw.execute("Any S Where W is Wave, W name '{0}', "
                                 "W snapsets S".format(wave_name))
-        print rset
         rset_indices = []
         for index in range(rset.rowcount):
             snapset_entity = rset.get_entity(index, 0)

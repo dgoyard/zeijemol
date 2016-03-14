@@ -106,7 +106,7 @@ class SnapsImporter(object):
         # Insert the snaps if necassary
         cnt = 0
         tot = len(wave_dict.keys())
-        print("Inserting '{0}' subjectMeasures...".format(
+        print("Inserting '{0}' snapsets...".format(
             len(wave_dict.keys())))
         for subject, snaps in wave_dict.items():
             cnt += 1
@@ -114,27 +114,24 @@ class SnapsImporter(object):
             ratio = float(cnt + 1) / tot
             self._progress_bar(ratio, title="SNAPS", bar_length=40)
 
-            subjectMeasure_struct = {
+            snapSet_struct = {
                 "identifier": self._md5_sum("{}{}".format(
                     wave_name, subject)),
                 "name": "{}_{}".format(wave_name.replace("_", " "),
                                        subject)
                 }
-            subjectMeasure_entity, subjectMeasure_created = \
+            snapSet_entity, snapSet_created = \
                 self._get_or_create_unique_entity(
-                    rql=("Any X Where X is SubjectMeasure, X identifier "
+                    rql=("Any X Where X is SnapSet, X identifier "
                          "'{0}'".format(
-                             subjectMeasure_struct["identifier"])),
+                             snapSet_struct["identifier"])),
                     check_unicity=True,
-                    entity_name="SubjectMeasure",
-                    **self._u(subjectMeasure_struct))
-            subjectMeasure_eid = subjectMeasure_entity.eid
+                    entity_name="SnapSet",
+                    **self._u(snapSet_struct))
+            snapSet_eid = snapSet_entity.eid
 
             for snap_key, snap_val in snaps.items():
                 # > create entity
-#                with open(path, "rb") as open_file:
-#                    sha1hex = self._md5_sum(open_file.read(), algo="sha1")
-
                 snap_struct = {
                     "identifier": self._md5_sum("{}{}{}".format(wave_name,
                                                                 subject,
@@ -143,7 +140,6 @@ class SnapsImporter(object):
                     "absolute": True,
                     "filepaths": Binary(json.dumps(snap_val["filepaths"])),
                     "dtype": snap_val["dtype"]
-#                    "sha1hex": sha1hex
                 }
                 snap_entity, snap_created = self._get_or_create_unique_entity(
                     rql=("Any X Where X is Snap, X identifier "
@@ -155,21 +151,20 @@ class SnapsImporter(object):
 
                 if snap_created:
                     self._set_unique_relation(
-                        snap_eid, "subject_measure", subjectMeasure_eid,
+                        snap_eid, "snapset", snapSet_eid,
                         check_unicity=False)
                     self._set_unique_relation(
-                        subjectMeasure_eid, "snaps", snap_eid,
+                        snapSet_eid, "snaps", snap_eid,
                         check_unicity=False)
 
             # add relations
-            if subjectMeasure_created:
+            if snapSet_created:
                 self._set_unique_relation(
-                    subjectMeasure_eid, "wave", wave_eid,
+                    snapSet_eid, "wave", wave_eid,
                     check_unicity=False)
                 self._set_unique_relation(
-                    wave_eid, "subject_measures", subjectMeasure_eid,
+                    wave_eid, "snapsets", snapSet_eid,
                     check_unicity=False)
-
 
         self.session.commit()
 
