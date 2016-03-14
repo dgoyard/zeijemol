@@ -70,17 +70,9 @@ class Gallery(View):
         self.w(u"</div>")
 
         # Display the image to rate
-
-        fold_snaps_eids = [snap.eid for snap in subjectmeasure_entity.snaps if snap.dtype == "FOLD"]
         self.w(u"<div id='leftgrid'>")
-        if len(fold_snaps_eids):
-            self.w(u'<div id="fold-viewer" class="leftblock">')
-            self.wview('slices-viewer', None, 'null',
-                       snaps_eids=fold_snaps_eids)
-            self.w(u'</div>')
-
         for snap in subjectmeasure_entity.snaps:
-            if snap.eid not in fold_snaps_eids:
+            if snap.dtype != "FOLD":
 
                 snap_filepaths = json.loads(snap.filepaths.getvalue())
                 assert len(snap_filepaths) == 1
@@ -110,6 +102,14 @@ class Gallery(View):
                                'src="data:image/{0};base64, {1}" />'.format(
                                    snap.dtype.lower(), encoded_string))
                 self.w(u'</div>')
+
+        fold_snaps = {snap.name: snap.identifier for snap in
+                      subjectmeasure_entity.snaps if snap.dtype == "FOLD"}
+        if len(fold_snaps):
+            self.w(u'<div id="fold-viewer" class="leftblock">')
+            self.wview('triplanar-qc-view', None, 'null',
+                       snaps_identifiers=fold_snaps)
+            self.w(u'</div>')
         self.w(u'</div>')
 
         # Display/Send a form

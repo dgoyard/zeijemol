@@ -96,16 +96,3 @@ a.fullbtn {
     margin-right: 0.0%;
     width: 100%;
 }
-a.fullbtn {
-    margin-right: 0.0%;
-    width: 100%;
-}
-#leftgrid { float: left; 
-    width: 90%;
-}
-.leftblock {
-    /*height: 100%;*/
-    background: rgba(0, 0, 0, 1);
-    border-radius: 8px;
-    margin: 0 0 15px 0;
-}

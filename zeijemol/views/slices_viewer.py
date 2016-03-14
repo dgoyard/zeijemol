@@ -9,104 +9,156 @@
 # System import
 import base64
 import json
+import glob
+import os
+from PIL import Image
 
 # CW import
 from cubicweb.view import View
 from cubicweb.web.views.ajaxcontroller import ajaxfunc
-from PIL import Image
 
 
-
-class SlicesViewer(View):
-    """ Custom view to score subjectmeasure files.
+class TriplanarQCView(View):
+    """ Dynamic volume slices viewer.
     """
-    __regid__ = "slices-viewer"
+    __regid__ = "triplanar-qc-view"
 
-    def call(self, snaps_eids):
-        
+    def call(self, snaps_identifiers, formulas=None):
+
+        if formulas is None:
+            # Origin is the top left corner of the image
+            formulas = {"sagittal": {"axial": "Math.round(y*nb_slices/im_length)",
+                                     "coronal": "Math.round(x*nb_slices/im_length)"},
+                        "coronal": {"sagittal": "Math.round(x*nb_slices/im_length)",
+                                    "axial": "Math.round(y*nb_slices/im_length)"},
+                        "axial": {"sagittal": "Math.round(x*nb_slices/im_length)",
+                                  "coronal": "Math.round(nb_slices-y*nb_slices/im_length)"}}
+
+        # Add JS and CSS resources for the slices viewer
         self._cw.add_js("slices_viewer.js")
+        self._cw.add_css("slices_viewer.css")
+        # Add JS and CSS resources for the slider used by the slices viewer
         self._cw.add_js("jquery-simple-slider/js/simple-slider.min.js")
         self._cw.add_css("jquery-simple-slider/css/simple-slider-volume.css")
-        self._cw.add_css("jquery-simple-slider/css/simple-slider.css")
-        html = "<div id='loading-message' style='display:none' align='center'><img src='{0}'/></div>".format(self._cw.data_url('images/loadData-lg.gif'))
-        html += "<div id='slices-viewer-container' style='visibility: hidden;'>"
-        html += "<div class='row' style='width: 100%;'>"
-        for snap_eid in snaps_eids:
-            rql = "Any S Where S is Snap, S eid '{0}'".format(snap_eid)
-            rset = self._cw.execute(rql)
-            snap_entity = rset.get_entity(0, 0)
-            volume_name = snap_entity.name
-            slices_nb = len(json.loads(snap_entity.filepaths.getvalue()))
-            volume_id = "_".join(volume_name.split())
-            html += "<div id='{0}' class='col-md-4 slicer'>".format(volume_name)
-            html += "<h4 style='color: white;'>{0}</h4>".format(volume_name)
+
+        # Add an hidden loading image
+        html = "<div id='loading-msg' style='display: none;' align='center'>"
+        loading_img_url = self._cw.data_url('images/loadData-lg.gif')
+        html += "<img src='{0}'/>".format(loading_img_url)
+        html += "</div>"
+
+        # Open the container div (hidden until the images are properly loaded)
+        html += "<div id='viewer-container' style='visibility: hidden;'>"
+
+        # Open the viewer div
+        html += "<div>"
+
+        # Create the 3 viewer columns :  sagittal, coronal, axial
+        filepaths = {}
+        anat_planes = ["sagittal", "coronal", "axial"]
+        nb_slices = None
+        for anat_plane in anat_planes:
+
+            snap_id = snaps_identifiers[anat_plane]
+            rql_images = ("Any F Where S is Snap, S identifier '{0}', "
+                          "S filepaths F".format(snap_id))
+            rset_images = self._cw.execute(rql_images)
+            images = json.loads(rset_images[0][0].getvalue())
+            filepaths[anat_plane] = images
+            if nb_slices is None:
+                nb_slices = len(images)
+            if len(images) != nb_slices:
+                raise Exception("The number of slices per anatomical plane"
+                                "must be constant")
+
+            html += "<div id='{0}' class='col-fixed slicer'>".format(anat_plane)
+            html += "<h4 style='color: white;'>{0}</h4>".format(
+                anat_plane.upper())
             html += "<h5 style='color: white;'>Brightness</h5>"
-            html += ("<input class='brightness-bar' type='text' data-slider='true' "
-                     "data-slider-range='0,200' value='100' "
-                     "data-slider-step='1' data-slider-highlight='true' data-slider-theme='volume'>")
+            html += ("<input class='brightness-bar' type='text' "
+                     "data-slider='true' data-slider-range='0,200' "
+                     "value='100' data-slider-step='1' "
+                     "data-slider-highlight='true' data-slider-theme='volume'>")
             html += "<h5 style='color: white;'>Browse volume</h5>"
-            html += ("<input class= 'slice-bar' type='text' data-slider='true' "
-                     "data-slider-range='0,{0}' value='{1}' data-slider-step='1' "
-                     "data-slider-highlight='true' data-slider-theme='volume'>".format(slices_nb-1, round(slices_nb/2)))
+            html += ("<input class='slice-bar' type='text' data-slider='true' "
+                     "data-slider-range='0,{0}' value='{1}' "
+                     "data-slider-step='1' data-slider-highlight='true' "
+                     "data-slider-theme='volume'>".format(
+                         (nb_slices-1), round((nb_slices-1)/2)))
             html += "<div class='ui-corner-all slider-content'>"
             html += "<div class='viewer ui-corner-all'>"
-            html += "<div class='content-conveyor ui-helper-clearfix slices-container'>"
+            html += ("<div class='content-conveyor "
+                     "ui-helper-clearfix slices-container'>")
             html += "</div>"
             html += "</div>"
             html += "</div>"
             html += "</div>"
         html += "</div>"
         html += "</div>"
-        
-        html += "<style>"
-        html += """
-[class^=slider] { display: inline-block; margin-bottom: 30px; }
-.output { color: #888; font-size: 14px; padding-top: 1px; margin-left: 5px; vertical-align: top;}
-.slider-volume {
-    width: 100px;
-}
-.slider {
-    width: 100px;
-}
-.item {
-    display: none;
-    position: absolute;
-}"""
-        html += "</style>"
 
         html += "<script>"
         html += "$(document).ready(function() {"
-        post_data = {"snaps_eids": snaps_eids}
-        html += """
-        $('.btn').each(function () {$(this).prop('disabled', true);}); 
-$('#loading-message').show();
-$.post("%s", %s)
-  .done(function(data) {
-  $('#loading-message').hide();
-    
-        var height_max = 0;
-        for (var key in data) {
-  if (data.hasOwnProperty(key)) {
-    var images = '';
-    for (var j = 0; j < data[key]['data'].length; j++) {
-        images += "<div class='item zoom'><img class='img-responsive' src='data:image/png;base64," + data[key]['data'][j] + "' /></div>";
-        }
-    height_max = data[key]['max_dimensions'][1];
-    $('#'+key).find('.slices-container').each(function () {$(this).html(images)});
-    //document.getElementById('slices_' + j).innerHTML = images;
-  }
-}
+        html += "$('.btn').each(function () {"
+        html += "$(this).prop('disabled', true);"
+        html += "});"
+        html += "$('#loading-msg').show();"
+        ajax_url = self._cw.build_url("ajax", fname="get_b64_images")
+        html += "$.post('{0}', {1})".format(
+            ajax_url, json.dumps({'filepaths': filepaths}))
+        html += ".done(function(data) {"
+        html += "$('#loading-msg').hide();"
+        html += "var images_data = data['images'];"
+        html += "var im_length = data['im_length'];"
+        html += "var nb_slices = {0};".format(nb_slices)
+        html += "for (var key in images_data) {"
+        html += "if (images_data.hasOwnProperty(key)) {"
+        html += "var images = '';"
+        html += "for (var j = 0; j < nb_slices; j++) {"
+        html += ("images += \"<div class='item'>"
+                 "<img class='slice-img' "
+                 "height='\"+im_length+\"' width='\"+im_length+\"' "
+                 "src='data:image/png;base64,\"+ images_data[key][j] + \"' />"
+                 "</div>\";")
+        html += "}"
+        html += "$('#'+key).find('.slices-container').each(function () {"
+        html += "$(this).html(images);"
+        html += "});"
 
-    $('#fold-viewer').css('height', (height_max+200)+'px');
-    init_slices_viewer();
-    
-    $('#slices-viewer-container').css('visibility', 'visible');
-    $('.btn').each(function () {$(this).prop('disabled', false);}); 
-  })
-  .fail(function() {
-    //alert( "error" );
-  });
-        """ % (self._cw.build_url("ajax", fname="get_b64_images"), json.dumps(post_data))
+        for anat_plane in anat_planes:
+            compute_coords = "var x = e.pageX - $(this).parent().offset().left;"
+            compute_coords += "var y = e.pageY - $(this).parent().offset().top;"
+            compute_coords += "console.log('Left: ' + x + ' Top: ' + y);"
+            for other_plane, formula in formulas[anat_plane].iteritems():
+                compute_coords += "$('#{0}').find('.slice-bar')".format(
+                    other_plane)
+                compute_coords += ".each(function () {"
+                compute_coords += "$(this).simpleSlider('setValue', {0});".format(
+                    formula)
+                compute_coords += "});"
+            html += "$('#{0}').find('img')".format(anat_plane)
+            html += ".each(function () {})"
+            html += ".mousedown(function (e) {"
+            html += compute_coords
+            html += "$(this).mousemove(function (e) {"
+            html += compute_coords
+            html += "});"
+            html += "}).mouseup(function () {"
+            html += "$(this).unbind('mousemove');"
+            html += "}).mouseout(function () {"
+            html += "$(this).unbind('mousemove');"
+            html += "});"
+        html += "}"
+        html += "}"
+        # html += "$('#fold-viewer').css('height', (max_height+200)+'px');"
+        html += "init_slices_viewer();"
+        html += "$('#viewer-container').css('visibility', 'visible');"
+        html += "$('.btn').each(function () {"
+        html += "$(this).prop('disabled', false);"
+        html += "});"
+        html += "})"
+        html += ".fail(function() {"
+        html += "alert('error');"
+        html += "});"
         html += "});"
         html += "</script>"
 
@@ -114,28 +166,41 @@ $.post("%s", %s)
 
 @ajaxfunc(output_type="json")
 def get_b64_images(self):
-    output = {}
-    print self._cw.form
-    snaps_eids = self._cw.form["snaps_eids[]"]
-    print type(snaps_eids)
-    heights = []
-    widths = []
-    for snap_eid in snaps_eids:
-        rql = "Any S Where S is Snap, S eid '{0}'".format(snap_eid)
-        rset = self._cw.execute(rql)
-        snap_entity = rset.get_entity(0, 0)
-        snap_name = snap_entity.name
-        output[snap_name] = {}
-        filepaths = json.loads(snap_entity.filepaths.getvalue())
-        with Image.open(filepaths[0]) as im:
-            width, height = im.size
-            widths.append(width)
-            heights.append(height)
-        encoded_images = []
-        for filepath in filepaths:
-            with open(filepath, "rb") as image_file:
-                encoded_image = base64.b64encode(image_file.read())
-                encoded_images.append(encoded_image)
-        output[snap_name]['data'] = encoded_images
-        output[snap_name]['max_dimensions'] = [max(widths), max(heights)]
+    if 1:
+        snaps_filepaths = self._cw.form["filepaths"]
+        output = {}
+        height = None
+        for anat_plane in ["sagittal", "coronal", "axial"]:
+            output[anat_plane] = {}
+            images = snaps_filepaths[anat_plane]
+            if height == None:
+                with Image.open(images[0]) as im:
+                    width, height = im.size
+                    assert width == height
+            encoded_images = []
+            for image in images:
+                with open(image, "rb") as image_file:
+                    encoded_image = base64.b64encode(image_file.read())
+                    encoded_images.append(encoded_image)
+            output[anat_plane]['images'] = encoded_images
+        output['im_length'] = height
+
+    if 0:
+        root = "/neurospin/eu-aims/tmp/101129844643/"
+        output = {}
+        output['images'] = {}
+        for mod in ["axial", "coronal", "sagittal"]:
+            output[mod] = {}
+            results = glob.glob(os.path.join(root, mod, "*.png"))
+            filepaths = sorted(results,
+                               key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split("-")[-1]))
+            with Image.open(filepaths[0]) as im:
+                width, height = im.size
+            encoded_images = []
+            for filepath in filepaths:
+                with open(filepath, "rb") as image_file:
+                    encoded_image = base64.b64encode(image_file.read())
+                    encoded_images.append(encoded_image)
+            output['images'][mod] = encoded_images
+        output['im_length'] = height
     return output
