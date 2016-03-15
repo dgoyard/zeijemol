@@ -23,7 +23,7 @@ class RateController(Controller):
     def publish(self, rset=None):
         """ Deal with the form.
         """
-        # Give me another subject_measure
+        # Give me another snapset
         if self._cw.form["rate"] != "Rate later":
 
             # Get the extra answers if specified
@@ -51,7 +51,7 @@ class RateController(Controller):
                 uid=login,
                 score=unicode(self._cw.form["rate"]),
                 extra_scores=unicode(json.dumps(extra_answers)),
-                subject_measure=unicode(self._cw.form["eid"]),
+                snapset=unicode(self._cw.form["eid"]),
                 scored_by=unicode(user_eid)).eid
             self._cw.execute("SET S scores R  WHERE S eid '{0}', R eid "
                              "'{1}'".format(self._cw.form["eid"], score_eid))

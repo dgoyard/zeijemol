@@ -85,7 +85,6 @@ class TriplanarQCView(View):
             if len(images) != nb_slices:
                 raise Exception("The number of slices per anatomical plane"
                                 "must be constant")
-            print nb_slices
 
             html += "<div id='{0}' class='col-fixed slicer' style='width: {1}px;'>".format(anat_plane, image_length)
             html += "<h4 style='color: white;'>{0}</h4>".format(
