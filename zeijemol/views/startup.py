@@ -62,7 +62,6 @@ class SnapIndexView(IndexView):
                         data[title] = frequency / nb_elements * 100
 
                 # Call PieChart for html generation of the summary
-                print container_id, nb_columns, container_id % nb_columns
                 if container_id % nb_columns == 0:
                     self.w(u'<tr>')
                 self.w(u'<td class="col-md-3">')
