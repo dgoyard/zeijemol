@@ -31,7 +31,7 @@ class Status(View):
         """
         # Get all the rated snaps ordered by wave name and by raters
         rset = self._cw.execute(
-            "Any WN, SC, UN Where W is Wave, W name WN, W subject_measures S, "
+            "Any WN, SC, UN Where W is Wave, W name WN, W snapsets S, "
             "S scores R, R score SC, R scored_by U, U login UN")
         snaps_struct = {}
         for wave_name, score, rater in rset:
@@ -46,7 +46,7 @@ class Status(View):
 
             # Get the number of snaps associated to the current wave
             rset = self._cw.execute("Any COUNT(S) Where W is Wave, W name "
-                                    "'{0}', W subject_measures S".format(wave_name))
+                                    "'{0}', W snapsets S".format(wave_name))
             nb_of_snaps = rset[0][0]
 
             # Fill the record
@@ -83,12 +83,12 @@ class Ratings(View):
         """
         # Get all the rated snaps ordered by wave name and code
         rset = self._cw.execute(
-            "Any WN, C, SC Where W is Wave, W name WN, W snaps S, "
-            "S code C, S scores R, R score SC")
+            "Any WN, C, SC Where W is Wave, W name WN, W snapsets S, "
+            "S name C, S scores R, R score SC")
         snaps_struct = {}
         for index, row in enumerate(rset):
             wave_name = row[0]
-            code = row[1]
+            code = row[1].split("_")[-1]
             snaps_struct.setdefault(wave_name, {}).setdefault(code, []).append(
                 row[2])
 
@@ -98,8 +98,8 @@ class Ratings(View):
         records = []
         for wave_name, wave_struct in snaps_struct.items():
             for code, rates in wave_struct.items():
-                nb_good = rates.count("Good")
-                nb_bad = rates.count("Bad")
+                nb_good = rates.count("Accept")
+                nb_bad = rates.count("Exclude")
                 nb_rates = nb_good + nb_bad
                 score = "{0:.3f}".format(nb_good / nb_rates * 100)
                 records.append([code, wave_name, str(nb_rates), str(nb_good),

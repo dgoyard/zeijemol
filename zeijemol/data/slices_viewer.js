@@ -64,4 +64,23 @@ function init_slices_viewer() {
         });
 
     });
+
+    $('.all-brightness-bar').each(function () {
+            $("<span>").addClass("output").insertAfter($(this));
+        }).bind("slider:ready slider:changed", function (event, data) {
+
+            var brightness = data.value;
+            $(this).nextAll(".output:first").html(brightness + ' %');
+            
+            $('.slicer').each(function () {
+                
+                var slices_elements = $(this).children('.slider-content').find('img');
+                
+                var div_id = $(this).attr("id");
+                div_elements[div_id]["brightness"] = brightness;
+                var slice_index = div_elements[div_id]["slice_index"];
+                set_image_filters(slices_elements.eq(slice_index), brightness);
+            });
+        });
+
 }

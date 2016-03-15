@@ -36,7 +36,7 @@ class SnapIndexView(IndexView):
 
             # For each wave: get the number of scores associated to each snap
             rset = self._cw.execute(
-                "Any S, N Where S is SubjectMeasure, S wave W, W name N")
+                "Any S, N Where S is SnapSet, S wave W, W name N")
             struct = {}
             for index, row in enumerate(rset):
                 wave_name = row[1]
@@ -62,7 +62,6 @@ class SnapIndexView(IndexView):
                         data[title] = frequency / nb_elements * 100
 
                 # Call PieChart for html generation of the summary
-                print container_id, nb_columns, container_id % nb_columns
                 if container_id % nb_columns == 0:
                     self.w(u'<tr>')
                 self.w(u'<td class="col-md-3">')
@@ -83,7 +82,7 @@ class SnapIndexView(IndexView):
 
         # Build summary in memory ordered by category and wave name
         rset = self._cw.execute(
-            "Any S, W, N, C Where S is SubjectMeasure, S wave W, W name N, W category C")
+            "Any S, W, N, C Where S is SnapSet, S wave W, W name N, W category C")
         struct = {}
         for index, row in enumerate(rset):
             wave_name = row[2]
