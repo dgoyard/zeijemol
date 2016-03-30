@@ -9,7 +9,7 @@
 # System import
 from __future__ import division
 import base64
-import random
+from numpy.random import choice
 import json
 import os
 
@@ -42,20 +42,30 @@ class Gallery(View):
         rset = self._cw.execute("Any S Where W is Wave, W name '{0}', "
                                 "W snapsets S".format(wave_name))
         rset_indices = []
+        rset_weights = []
         for index in range(rset.rowcount):
             snapset_entity = rset.get_entity(index, 0)
-            scores = [
-                e for e in snapset_entity.scores
-                if e.scored_by[0].login == self._cw.session.login]
-            if len(scores) == 0:
+            nb_rate = 1
+            already_rated = False
+            for escore in snapset_entity.scores:
+                nb_rate += 1
+                if escore.scored_by[0].login == self._cw.session.login:
+                    already_rated = True
+                    break
+            if not already_rated:
                 rset_indices.append(index)
+                rset_weights.append(1. / nb_rate)
+
+        rset_weights_norm = [
+            float(x) / sum(rset_weights) for x in rset_weights]
+
         if len(rset_indices) == 0:
             error = "No more snapSet to rate, thanks."
             self.w(u"<p class='label label-danger'>{0}</p>".format(error))
             return
         nb_of_snapsets = rset.rowcount
         nb_snapsets_to_rate = len(rset_indices)
-        rand_index = random.randint(0, nb_snapsets_to_rate - 1)
+        rand_index = choice(rset_indices, p=rset_weights_norm)
         snapset_entity = rset.get_entity(rset_indices[rand_index], 0)
 
         # Dispaly status
