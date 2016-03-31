@@ -40,7 +40,7 @@ class Status(View):
 
         # Construct all table rows
         labels = ["UID", "Wave name", "Number of rates",
-                  "Number of < Accept > rates", "Number of < Exclude > rates"]
+                  "Accepted", "Manual edits prescribed", "Excluded"]
         records = []
         for wave_name, wave_struct in snaps_struct.items():
 
@@ -53,12 +53,14 @@ class Status(View):
             for rater, scores in wave_struct.items():
                 nb_rates = len(scores)
                 nb_good = scores.count("Accept")
+                nb_man = scores.count("Prescribe manual edits")
                 nb_bad = scores.count("Exclude")
                 records.append([
                     rater,
                     wave_name,
                     "{0}/{1}".format(nb_rates, nb_of_snaps),
                     "{0}/{1}".format(nb_good, nb_rates),
+                    "{0}/{1}".format(nb_man, nb_rates),
                     "{0}/{1}".format(nb_bad, nb_rates)])
 
         # Call JTableView for html generation of the table
@@ -94,16 +96,18 @@ class Ratings(View):
 
         # Construct all table rows
         labels = ["Code", "Wave name", "Number of rates",
-                  "Number of Good rates", "Number of Bad rates", "Score (%)"]
+                  "Number of Inclusions", "Number of prescriptions",
+                  "Number of Exclusions", "Score (%)"]
         records = []
         for wave_name, wave_struct in snaps_struct.items():
             for code, rates in wave_struct.items():
                 nb_good = rates.count("Accept")
                 nb_bad = rates.count("Exclude")
-                nb_rates = nb_good + nb_bad
+                nb_man = rates.count("Prescribe manual edits")
+                nb_rates = nb_good + nb_bad + nb_man
                 score = "{0:.3f}".format(nb_good / nb_rates * 100)
                 records.append([code, wave_name, str(nb_rates), str(nb_good),
-                                str(nb_bad), score])
+                                str(nb_man), str(nb_bad), score])
 
         # Call JTableView for html generation of the table
         self.wview("jtable-clientside", None, "null", labels=labels,

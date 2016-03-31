@@ -202,7 +202,7 @@ class Score(EntityType):
         description=u"the user that have scored the snap file")
     score = String(
         required=True,
-        vocabulary=("Accept", "Exclude"),
+#        vocabulary=("Accept", "Exclude"),
         description=u"the user score.")
     extra_scores = String(
         description=u"the extra user scores.")

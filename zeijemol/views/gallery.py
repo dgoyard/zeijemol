@@ -130,12 +130,12 @@ class Gallery(View):
         self.w(u'<input type="hidden" name="wave_name" value="{0}">'.format(wave_name))
         self.w(u'<input class="btn btn-success" type="submit" '
                'name="rate" value="Accept"/>')
+        self.w(u'<input class="btn btn-warning" type="submit" '
+               'name="rate" value="Prescribe manual edits"/>')
         self.w(u'<input class="btn btn-danger" type="submit" '
                'name="rate" value="Exclude"/>')
         self.w(u'<input class="btn btn-info" type="submit" '
                'name="rate" value="Rate later"/>')
-        # self.w(u'<input class="btn btn-warning" type="submit" '
-                # 'name="rate" value="Prescribe manual edits"/>')
 
         if len(extra_answers) > 0:
             self.w(u'<u>Reason of exclusion:</u>')
