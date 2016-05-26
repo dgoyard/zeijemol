@@ -14,7 +14,7 @@ import json
 import os
 
 # CW import
-from cgi import parse_qs
+from urlparse import parse_qs
 from cubicweb.view import View
 
 
@@ -80,6 +80,35 @@ class Gallery(View):
 
         # Display the image to rate
 
+        # Display/Send a form
+        href = self._cw.build_url("rate-controller", eid=snapset_entity.eid)
+        self.w(u'<div id="gallery-form">')
+        self.w(u'<form action="{0}" method="post">'.format(href))
+        self.w(u'<input type="hidden" name="wave_name" value="{0}">'.format(
+            wave_name))
+        self.w(u'<input class="btn btn-success gallery-btn" type="submit" '
+               'name="rate" value="Accept"/>')
+        self.w(u'<input class="btn btn-warning gallery-btn" type="submit" '
+               'name="rate" value="Prescribe manual edits"/>')
+        self.w(u'<input class="btn btn-danger gallery-btn" type="submit" '
+               'name="rate" value="Exclude"/>')
+        self.w(u'<input class="btn btn-info gallery-btn" type="submit" '
+               'name="rate" value="Rate later"/>')
+
+        if len(extra_answers) > 0:
+            self.w(u'<h5><u>Exclude due to:</u></h5>')
+        for extra in extra_answers:
+            self.w(u'<div class="checkbox">')
+            self.w(u'<label>')
+            self.w(u'<input class="checkbox" type="checkbox" '
+                   'name="extra_answers" value="{0}"/>'.format(extra))
+            self.w(unicode(extra))
+            self.w(u'</label>')
+            self.w(u'</div>')
+
+        self.w(u'</form>')
+        self.w(u'</div>')
+
         triplanar_snaps_identifiers = {snap.name: snap.identifier
                                        for snap in snapset_entity.snaps
                                        if snap.dtype == "triplanar"}
@@ -121,36 +150,6 @@ class Gallery(View):
                                'src="data:image/{0};base64, {1}" />'.format(
                                    snap.dtype.lower(), encoded_string))
                 self.w(u'</div>')
-        self.w(u'</div>')
-
-        # Display/Send a form
-        href = self._cw.build_url("rate-controller", eid=snapset_entity.eid)
-        self.w(u'<div id="gallery-form">')
-        self.w(u'<form action="{0}" method="post">'.format(href))
-        self.w(u'<input type="hidden" name="wave_name" value="{0}">'.format(
-            wave_name))
-        self.w(u'<input class="btn btn-success" type="submit" '
-               'name="rate" value="Accept"/>')
-        self.w(u'<input class="btn btn-warning" type="submit" '
-               'name="rate" value="Prescribe manual edits"/>')
-        self.w(u'<input class="btn btn-danger" type="submit" '
-               'name="rate" value="Exclude"/>')
-
-        if len(extra_answers) > 0:
-            self.w(u'<u>Exclude due to:</u>')
-        for extra in extra_answers:
-            self.w(u'<div class="checkbox">')
-            self.w(u'<label>')
-            self.w(u'<input class="checkbox" type="checkbox" '
-                   'name="extra_answers" value="{0}"/>'.format(extra))
-            self.w(unicode(extra))
-            self.w(u'</label>')
-            self.w(u'</div>')
-
-        self.w(u'<input class="btn btn-info" type="submit" '
-               'name="rate" value="Rate later"/>')
-
-        self.w(u'</form>')
         self.w(u'</div>')
 
         self.w(u'<div id="floating-clear"/>')

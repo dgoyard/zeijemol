@@ -1,3 +1,4 @@
+# coding: utf-8
 ##########################################################################
 # NSAp - Copyright (C) CEA, 2016
 # Distributed under the terms of the CeCILL-B license, as published by
@@ -22,22 +23,27 @@ class TriplanarQCView(View):
     __regid__ = "triplanar-qc-view"
 
     def call(self, snaps_identifiers, formulas=None):
-
         if formulas is None:
             # Origin is the top left corner of the image
-            formulas = {"sagittal": {"axial": "Math.round(y*nb_slices/im_length)",
-                                     "coronal": "Math.round(x*nb_slices/im_length)"},
-                        "coronal": {"sagittal": "Math.round(x*nb_slices/im_length)",
-                                    "axial": "Math.round(y*nb_slices/im_length)"},
-                        "axial": {"sagittal": "Math.round(x*nb_slices/im_length)",
-                                  "coronal": "Math.round(nb_slices-y*nb_slices/im_length)"}}
+            formulas = {
+                "sagittal": {
+                    "axial": "Math.round(y*nb_slices/im_length)",
+                    "coronal": "Math.round(x*nb_slices/im_length)"
+                },
+                "coronal": {
+                    "sagittal": "Math.round(x*nb_slices/im_length)",
+                    "axial": "Math.round(y*nb_slices/im_length)"
+                },
+                "axial": {
+                    "sagittal": "Math.round(x*nb_slices/im_length)",
+                    "coronal": "Math.round(nb_slices-y*nb_slices/im_length)"
+                }
+            }
 
-        # Add JS and CSS resources for the slices viewer
-        self._cw.add_js("slices_viewer.js")
-        self._cw.add_css("slices_viewer.css")
-        # Add JS and CSS resources for the slider used by the slices viewer
+        # Add JS and CSS resources for the sliders
         self._cw.add_js("jquery-simple-slider/js/simple-slider.min.js")
         self._cw.add_css("jquery-simple-slider/css/simple-slider-volume.css")
+        self._cw.add_css("slices_viewer.css")
 
         # Add an hidden loading image
         html = "<div id='loading-msg' style='display: none;' align='center'>"
@@ -45,25 +51,11 @@ class TriplanarQCView(View):
         html += "<img src='{0}'/>".format(loading_img_url)
         html += "</div>"
 
-        # Open the container div (hidden until the images are properly loaded)
-        html += "<div id='viewer-container' style='visibility: hidden;'>"
-
-        # Open the viewer div
-        html += "<div>"
-        # Add a brightness control bar
-        html += "<div>"
-        html += "<h5 style='color: white;'>Brightness</h5>"
-        html += ("<input class='all-brightness-bar' type='text' "
-                 "data-slider='true' data-slider-range='0,200' "
-                 "value='100' data-slider-step='1' "
-                 "data-slider-highlight='true' data-slider-theme='volume'>")
-        html += "</div>"
-
         # Create the 3 viewer columns :  sagittal, coronal, axial
         filepaths = {}
         anat_planes = ["sagittal", "coronal", "axial"]
         nb_slices = None
-        image_length = None
+        im_length = None
         for anat_plane in anat_planes:
 
             snap_id = snaps_identifiers[anat_plane]
@@ -72,11 +64,11 @@ class TriplanarQCView(View):
             rset_images = self._cw.execute(rql_images)
             images = json.loads(rset_images[0][0].getvalue())
 
-            if image_length is None:
+            if im_length is None:
                 with Image.open(images[0]) as im:
                     width, height = im.size
                     assert width == height
-                    image_length = width
+                    im_length = width
 
             filepaths[anat_plane] = images
 
@@ -86,93 +78,158 @@ class TriplanarQCView(View):
                 raise Exception("The number of slices per anatomical plane"
                                 "must be constant")
 
-            html += "<div id='{0}' class='col-fixed slicer' style='width: {1}px;'>".format(anat_plane, image_length)
+        html += "<style>"
+        html += ".slider-volume {"
+        html += "width: {0}px;".format(int(95*im_length/100))
+        html += "}"
+        html += "</style>"
+
+        max_slice_index = nb_slices - 1
+        default_slice_index = int(max_slice_index/2)
+
+        anat_planes = ["sagittal", "coronal", "axial"]
+        html += "<div class='container'>"
+        for idx, anat_plane in enumerate(anat_planes):
+            html += "<div id='{0}' class='subdiv'>".format(anat_plane)
+            if idx == 1:
+                html += "<h4 style='color: white;'>BRIGHTNESS</h4>"
+                html += ("<input id='brightness-bar' type='text' "
+                         "data-slider='true' data-slider-range='0,200' "
+                         "value='100' data-slider-step='1' "
+                         "data-slider-highlight='true' "
+                         "data-slider-theme='volume'>")
+                html += ("<p id='brightness-bar-text' style='color: "
+                         "white;margin-bottom: 50px;'>100 %</p>")
             html += "<h4 style='color: white;'>{0}</h4>".format(
                 anat_plane.upper())
-            html += "<h5 style='color: white;'>Browse volume</h5>"
             html += ("<input class='slice-bar' type='text' data-slider='true' "
                      "data-slider-range='0,{0}' value='{1}' "
                      "data-slider-step='1' data-slider-highlight='true' "
                      "data-slider-theme='volume'>".format(
-                         (nb_slices-1), round((nb_slices-1)/2)))
-            html += "<div class='ui-corner-all slider-content'>"
-            html += "<div class='viewer ui-corner-all'>"
-            html += ("<div class='content-conveyor "
-                     "ui-helper-clearfix slices-container'>")
+                         max_slice_index, default_slice_index))
+            html += ("<p class='slice-bar-text' style='color: white;'>"
+                     "{0} / {1}</p>".format(
+                         default_slice_index, max_slice_index))
+            html += ("<canvas class='slice-img' width='{0}' height='{0}'>"
+                     "</canvas>".format(im_length))
             html += "</div>"
-            html += "</div>"
-            html += "</div>"
-            html += "</div>"
-        html += "</div>"
         html += "</div>"
 
         html += "<script>"
         html += "$(document).ready(function() {"
-        html += "$('.btn').each(function () {"
+        html += "$('.gallery-btn').each(function () {"
         html += "$(this).prop('disabled', true);"
         html += "});"
-        html += "$('#loading-msg').show();"
+
+        html += "var formulas = {0};".format(json.dumps(formulas))
         ajax_url = self._cw.build_url("ajax", fname="get_b64_images")
-        html += "$.post('{0}', {1})".format(
-            ajax_url, json.dumps({'filepaths': json.dumps(filepaths)}))
-        html += ".done(function(data) {"
-        html += "$('#loading-msg').hide();"
-        html += "var images_data = data['images'];"
-        html += "var im_length = {0};".format(image_length)
         html += "var nb_slices = {0};".format(nb_slices)
-        html += "for (var key in data) {"
-        html += "if (data.hasOwnProperty(key)) {"
-        html += "var images = '';"
-        html += "for (var j = 0; j < nb_slices; j++) {"
-        html += ("images += \"<div class='item'>"
-                 "<img class='slice-img' "
-                 "height='\"+im_length+\"' width='\"+im_length+\"' "
-                 "src='data:image/png;base64,\"+ data[key][j] + \"' />"
-                 "</div>\";")
+        html += "var im_length = {0};".format(im_length)
+        html += "var anat_planes = {0};".format(json.dumps(anat_planes))
+        html += "var brightness = 100;"
+
+        html += "function draw_img(canvas_context, encoded_img) {"
+        html += "var image = new Image();"
+        html += "image.onload = function() {"
+        html += "canvas_context.drawImage(image, 0, 0);"
+        html += "};"
+        html += "image.src = 'data:image/  png;base64,' + encoded_img;"
+        html += "};"
+
+        html += "function getMousePos(canvas_el, evt) {"
+        html += "var rect = canvas_el.getBoundingClientRect();"
+        html += "return {"
+        html += "x: evt.clientX - rect.left,"
+        html += "y: evt.clientY - rect.top"
+        html += "};"
         html += "}"
-        html += "$('#'+key).find('.slices-container').each(function () {"
-        html += "$(this).html(images);"
+
+        html += "function cursor_changed(evt, canvas_el, plane){"
+        html += "var pos = getMousePos(canvas_el, evt);"
+        html += "x = pos.x;"
+        html += "y = pos.y;"
+        html += "$.each(formulas[plane], function( other_plane, formula ) {"
+        html += "$('#'+other_plane).find('.slice-bar').each(function () {"
+        html += "$(this).simpleSlider('setValue', eval(formula));"
+        html += "});"
+        html += "});"
+        html += "}"
+
+        html += "function set_brightness(canvas_el, brightness) {"
+        html += "var filter = 'brightness('+brightness+'%)';"
+        html += ("var filter_targets = ['filter', '-webkit-filter', "
+                 "'-moz-filter', '-o-filter', '-ms-filter'];")
+        html += "$.each(filter_targets, function( _, target ){"
+        html += "canvas_el.css(target, filter);"
+        html += "});"
+        html += "}"
+
+        html += "$('#loading-msg').show();"
+        html += "$.post('{0}', {{'filepaths': JSON.stringify({1})}})".format(
+            ajax_url, json.dumps(filepaths))
+        html += ".done(function(ajax_data) {"
+
+        html += "$.each(anat_planes, function( index, plane_name ) {"
+        html += "var canvas = $('#'+plane_name).children('canvas');"
+        html += "var canvas_el = canvas.get(0);"
+
+        html += "canvas.mousedown(function (e) {"
+        html += "cursor_changed(e, canvas_el, plane_name);"
+        html += "$(this).mousemove(function (e) {"
+        html += "cursor_changed(e,canvas_el, plane_name);"
+        html += "});"
+        html += "}).mouseup(function () {"
+        html += "$(this).unbind('mousemove');"
+        html += "}).mouseout(function () {"
+        html += "$(this).unbind('mousemove');"
         html += "});"
 
-        for anat_plane in anat_planes:
-            compute_coords = "var x = e.pageX - $(this).parent().offset().left;"
-            compute_coords += "var y = e.pageY - $(this).parent().offset().top;"
-            # compute_coords += "console.log('Left: ' + x + ' Top: ' + y);"
-            for other_plane, formula in formulas[anat_plane].iteritems():
-                compute_coords += "$('#{0}').find('.slice-bar')".format(
-                    other_plane)
-                compute_coords += ".each(function () {"
-                compute_coords += "$(this).simpleSlider('setValue', {0});".format(
-                    formula)
-                compute_coords += "});"
-            html += "$('#{0}').find('img')".format(anat_plane)
-            html += ".each(function () {})"
-            html += ".mousedown(function (e) {"
-            html += compute_coords
-            html += "$(this).mousemove(function (e) {"
-            html += compute_coords
-            html += "});"
-            html += "}).mouseup(function () {"
-            html += "$(this).unbind('mousemove');"
-            html += "}).mouseout(function () {"
-            html += "$(this).unbind('mousemove');"
-            html += "});"
-        html += "}"
-        html += "}"
-        html += "$('#fold-viewer').css('height', (im_length+300)+'px');"
-        html += "init_slices_viewer();"
-        html += "$('#viewer-container').css('visibility', 'visible');"
-        html += "$('.btn').each(function () {"
+        html += "var ctx = canvas_el.getContext('2d');"
+        html += "$('#'+plane_name).children('.slice-bar').each(function () {"
+        html += "$('<span>').addClass('output').insertAfter($(this));"
+        html += "draw_img(ctx, ajax_data[plane_name][{0}]);".format(
+            default_slice_index)
+        html += "set_brightness(canvas, brightness);"
+        # Close slice-bar each
+        html += "})"
+        html += (".bind('slider:ready slider:changed', "
+                 "function (event, data) {")
+        html += "var slice_index = data.value;"
+        html += ("$('#'+plane_name).children('.slice-bar-text').html("
+                 "slice_index + ' / ' + {0});".format(max_slice_index))
+        html += "draw_img(ctx, ajax_data[plane_name][slice_index]);"
+        html += "set_brightness(canvas, brightness);"
+        # Close bind
+        html += "});"
+        # Close iteration over anat planes
+        html += "});"
+
+        html += "$('#brightness-bar').each(function () {"
+        html += ("}).bind('slider:ready slider:changed', "
+                 "function (event, data) {")
+        html += "brightness = data.value;"
+        html += "$('#brightness-bar-text').html(brightness + ' %');"
+        html += "$('.slice-img').each(function () {"
+        html += "set_brightness($(this), brightness);"
+        html += "});"
+        html += "});"
+
+        html += "$('#loading-msg').hide();"
+
+        html += "$('.container').show();"
+
+        html += "$('.gallery-btn').each(function () {"
         html += "$(this).prop('disabled', false);"
         html += "});"
-        html += "})"
-        html += ".fail(function() {"
-        html += "alert('error');"
+
+        # Close ajax done
         html += "});"
+        # close document
         html += "});"
         html += "</script>"
 
         self.w(unicode(html))
+
 
 @ajaxfunc(output_type="json")
 def get_b64_images(self):

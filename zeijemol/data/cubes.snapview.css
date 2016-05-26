@@ -72,13 +72,12 @@ div.boxBody {
 }
 
 #gallery-form {
-    float: right;
-    width: 10%;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .btn {
-    margin: 2%;
-    width: 100%;
+    margin-right: 2%;
 }
 
 #wave-rate {
