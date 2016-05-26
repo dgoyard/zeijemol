@@ -66,7 +66,7 @@ class Gallery(View):
         nb_of_snapsets = rset.rowcount
         nb_snapsets_to_rate = len(rset_indices)
         rand_index = choice(rset_indices, p=rset_weights_norm)
-        snapset_entity = rset.get_entity(rset_indices[rand_index], 0)
+        snapset_entity = rset.get_entity(rand_index, 0)
 
         # Dispaly status
         progress = int((1 - nb_snapsets_to_rate / nb_of_snapsets) * 100)
