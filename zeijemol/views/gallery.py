@@ -41,8 +41,19 @@ class Gallery(View):
         extra_answers = json.loads(rset[0][0])
         rset = self._cw.execute("Any S Where W is Wave, W name '{0}', "
                                 "W snapsets S".format(wave_name))
+        # find minimum rating
+        _min = float("inf")
+        for index in range(rset.rowcount):
+            snapset_entity = rset.get_entity(index, 0)
+            nb_rate = 1
+            for escore in snapset_entity.scores:
+                nb_rate += 1
+            if nb_rate < _min:
+                _min = nb_rate
+
         rset_indices = []
         rset_weights = []
+        nb_snapsets_to_rate = 0
         for index in range(rset.rowcount):
             snapset_entity = rset.get_entity(index, 0)
             nb_rate = 1
@@ -53,9 +64,9 @@ class Gallery(View):
                     already_rated = True
                     break
             if not already_rated:
-                rset_indices.append(index)
-                rset_weights.append(1. / nb_rate)
-
+                nb_snapsets_to_rate += 1
+                if nb_rate < _min + 2:
+                    rset_indices.append(index)
         rset_weights_norm = [
             float(x) / sum(rset_weights) for x in rset_weights]
 
@@ -64,7 +75,6 @@ class Gallery(View):
             self.w(u"<p class='label label-danger'>{0}</p>".format(error))
             return
         nb_of_snapsets = rset.rowcount
-        nb_snapsets_to_rate = len(rset_indices)
         rand_index = choice(rset_indices, p=rset_weights_norm)
         snapset_entity = rset.get_entity(rand_index, 0)
 
@@ -123,6 +133,15 @@ class Gallery(View):
             if snap.dtype != "triplanar":
 
                 snap_filepaths = json.loads(snap.filepaths.getvalue())
+
+                if len(snap_filepaths) != 1:
+                    error = ("This subject seems to be missing, please contact"
+                             " an administrator and refresh the page, thank "
+                             "you")
+                    self.w(u"<p class='label label-danger'>{0}</p>".format(
+                        error))
+                    return
+
                 assert len(snap_filepaths) == 1
                 filepath = snap_filepaths[0]
                 self.w(u'<div id="gallery-img" class="leftblock">')
