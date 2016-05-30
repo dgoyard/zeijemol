@@ -67,6 +67,7 @@ class Gallery(View):
                 nb_snapsets_to_rate += 1
                 if nb_rate < _min + 2:
                     rset_indices.append(index)
+                    rset_weights.append(1. / nb_rate)
         rset_weights_norm = [
             float(x) / sum(rset_weights) for x in rset_weights]
 
