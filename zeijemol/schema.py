@@ -210,11 +210,12 @@ class Score(EntityType):
         "SnapSet",
         cardinality="1*",
         inlined=False)
+    # composite object: if CWUser is deleted, the scores are deleted too
     scored_by = SubjectRelation(
         "CWUser",
         cardinality="1*",
         inlined=False,
-        composite="subject")
+        composite="object")
 
 
 ###############################################################################
