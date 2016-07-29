@@ -9,9 +9,10 @@
 # System import
 from __future__ import division
 import base64
-from numpy.random import choice
+import numpy
 import json
 import os
+from random import choice
 
 # CW import
 from urlparse import parse_qs
@@ -34,52 +35,45 @@ class Gallery(View):
         title = kwargs["title"][0]
         wave_name = kwargs["wave"][0]
 
-        # Get the snapset to rate
+        # Get the snapset to extra answers
         self.w(u'<h1>{0}</h1>'.format(title))
         rset = self._cw.execute("Any E Where W is Wave, W name '{0}', "
                                 "W extra_answers E".format(wave_name))
         extra_answers = json.loads(rset[0][0])
-        rset = self._cw.execute("Any S Where W is Wave, W name '{0}', "
-                                "W snapsets S".format(wave_name))
-        # find minimum rating
-        _min = float("inf")
-        for index in range(rset.rowcount):
-            snapset_entity = rset.get_entity(index, 0)
-            nb_rate = 1
-            for escore in snapset_entity.scores:
-                nb_rate += 1
-            if nb_rate < _min:
-                _min = nb_rate
 
-        rset_indices = []
-        rset_weights = []
-        nb_snapsets_to_rate = 0
-        for index in range(rset.rowcount):
-            snapset_entity = rset.get_entity(index, 0)
-            nb_rate = 1
-            already_rated = False
-            for escore in snapset_entity.scores:
-                nb_rate += 1
-                if escore.scored_by[0].login == self._cw.session.login:
-                    already_rated = True
-                    break
-            if not already_rated:
-                nb_snapsets_to_rate += 1
-                if nb_rate < _min + 2:
-                    rset_indices.append(index)
-                    rset_weights.append(1. / nb_rate)
-        rset_weights_norm = [
-            float(x) / sum(rset_weights) for x in rset_weights]
-
-        if len(rset_indices) == 0:
-            error = "No more snapSet to rate, thanks."
-            self.w(u"<p class='label label-danger'>{0}</p>".format(error))
-            return
-        nb_of_snapsets = rset.rowcount
-        rand_index = choice(rset_indices, p=rset_weights_norm)
-        snapset_entity = rset.get_entity(rand_index, 0)
+        # Select the snapset to be rated: use the internal connection in order
+        # to get the full rating distribution and then interset this
+        # distribution with the user rates in order to uniformally
+        # fill the database
+        # Note: need to access the selected snapset with the user rights
+        with self._cw.cnx._cnx.repo.internal_cnx() as cnx:
+            rset = cnx.execute("Any S Where W is Wave, W name '{0}', "
+                               "W snapsets S".format(wave_name))
+            # find minimum rating
+            nb_scores = []
+            nb_user_scores = []
+            for index in range(rset.rowcount):
+                entity = rset.get_entity(index, 0)
+                scores = entity.scores
+                nb_scores.append(len(scores))
+                nb_user_scores.append(
+                    len([sc for sc in scores
+                        if sc.scored_by[0].login == self._cw.session.login]))
+            nb_scores = numpy.asarray(nb_scores)
+            nb_user_scores = numpy.asarray(nb_user_scores)
+            selection = (1 - nb_user_scores) * nb_scores
+            selection = selection.astype("int")
+            info = numpy.iinfo(selection.dtype)
+            selection[numpy.where(selection == 0)] = info.max
+            snapset_indexes = numpy.where(selection == selection.min())
+            snapset_index = choice(snapset_indexes[0])
+            snapset_eid = rset[snapset_index][0]
+        rset = self._cw.execute("Any S Where S eid '{0}'".format(snapset_eid))
+        snapset_entity = rset.get_entity(0, 0)
 
         # Dispaly status
+        nb_of_snapsets = len(nb_scores)
+        nb_snapsets_to_rate = numpy.sum(1 - nb_user_scores)
         progress = int((1 - nb_snapsets_to_rate / nb_of_snapsets) * 100)
         self.w(u'<div class="progress">')
         self.w(u'<div class="progress-bar" role="progressbar" '
@@ -150,9 +144,10 @@ class Gallery(View):
                 if snap.dtype == "CTM":
                     json_stats = self._cw.vreg.config["json_population_stats"]
                     if not os.path.isfile(json_stats):
-                        json_stats = os.path.join(self._cw.vreg.config.CUBES_DIR,
-                                                  "zeijemol", "data", "qcsurf",
-                                                  "population_mean_sd.json")
+                        json_stats = os.path.join(
+                            self._cw.vreg.config.CUBES_DIR,
+                            "zeijemol", "data", "qcsurf",
+                            "population_mean_sd.json")
                     fsdir = os.path.join(os.path.dirname(filepath),
                                          os.pardir)
                     self.wview("mesh-qcsurf", None, "null", fsdir=fsdir,
@@ -162,13 +157,15 @@ class Gallery(View):
                     with open(filepath, "rb") as image_file:
                         encoded_string = base64.b64encode(image_file.read())
                     if snap.dtype.lower() == "pdf":
-                        self.w(u'<embed class="gallery-pdf" alt="Embedded PDF" '
-                               'src="data:application/pdf;base64, {0}" />'.format(
-                                   encoded_string))
+                        self.w(
+                            u'<embed class="gallery-pdf" alt="Embedded PDF" '
+                            'src="data:application/pdf;base64, {0}" />'.format(
+                                encoded_string))
                     else:
-                        self.w(u'<img class="gallery-img" alt="Embedded Image" '
-                               'src="data:image/{0};base64, {1}" />'.format(
-                                   snap.dtype.lower(), encoded_string))
+                        self.w(
+                            u'<img class="gallery-img" alt="Embedded Image" '
+                            'src="data:image/{0};base64, {1}" />'.format(
+                                snap.dtype.lower(), encoded_string))
                 self.w(u'</div>')
         self.w(u'</div>')
 
