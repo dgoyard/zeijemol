@@ -63,12 +63,14 @@ class Gallery(View):
             nb_user_scores = numpy.asarray(nb_user_scores)
             # p(snapset|len(scores)=X) = 1/X (before norm)
             # p(snapset) = 1./(x * Nx) where Nx= number of snapsets with
-            # X scores
+            # X scores (rated X times)
             key, counts = numpy.unique(nb_scores, return_counts=True)
             item_per_score = dict(zip(key, counts))
             weights = [1./x * 1./item_per_score[x] for x in nb_scores]
             weights = numpy.asarray(weights).astype(numpy.single)
+            # set a null probability for already rated snapsets
             weights[numpy.where(nb_user_scores == 1)] = 0
+            # normalize
             weights = weights / sum(weights)
 
             snapset_index = choice(range(len(weights)), p=weights)
