@@ -12,7 +12,7 @@ import base64
 import numpy
 import json
 import os
-from random import choice
+from numpy.random import choice
 
 # CW import
 from urlparse import parse_qs
@@ -59,14 +59,19 @@ class Gallery(View):
                 nb_user_scores.append(
                     len([sc for sc in scores
                         if sc.scored_by[0].login == self._cw.session.login]))
-            nb_scores = numpy.asarray(nb_scores)
+            nb_scores = numpy.asarray(nb_scores).astype(numpy.single)
             nb_user_scores = numpy.asarray(nb_user_scores)
-            selection = (1 - nb_user_scores) * nb_scores
-            selection = selection.astype("int")
-            info = numpy.iinfo(selection.dtype)
-            selection[numpy.where(selection == 0)] = info.max
-            snapset_indexes = numpy.where(selection == selection.min())
-            snapset_index = choice(snapset_indexes[0])
+            # p(snapset|len(scores)=X) = 1/X (before norm)
+            # p(snapset) = 1./(x * Nx) where Nx= number of snapsets with
+            # X scores
+            key, counts = numpy.unique(nb_scores, return_counts=True)
+            item_per_score = dict(zip(key, counts))
+            weights = [1./x * 1./item_per_score[x] for x in nb_scores]
+            weights = numpy.asarray(weights).astype(numpy.single)
+            weights[numpy.where(nb_user_scores == 1)] = 0
+            weights = weights / sum(weights)
+
+            snapset_index = choice(range(len(weights)), p=weights)
             snapset_eid = rset[snapset_index][0]
         rset = self._cw.execute("Any S Where S eid '{0}'".format(snapset_eid))
         snapset_entity = rset.get_entity(0, 0)
